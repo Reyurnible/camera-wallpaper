@@ -18,6 +18,9 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Created by shunhosaka on 2015/11/22.
+ * http://techbooster.jpn.org/andriod/application/6738/
+ * http://devdroid123.blog.fc2.com/blog-entry-22.html
+ * https://github.com/googlesamples/android-Camera2Video/blob/master/Application/src/main/java/com/example/android/camera2video/Camera2VideoFragment.java
  */
 public class CameraWallpaper extends WallpaperService {
     public static final String TAG = CameraWallpaper.class.getSimpleName();
