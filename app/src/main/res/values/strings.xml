@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CameraWallpaper</string>
+    <string name="camera_desctiption">カメラのライブ壁紙</string>
 </resources>
