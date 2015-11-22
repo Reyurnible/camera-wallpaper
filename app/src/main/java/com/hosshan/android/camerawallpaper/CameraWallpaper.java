@@ -22,10 +22,10 @@ public class CameraWallpaper extends WallpaperService {
 
     @Override
     public Engine onCreateEngine() {
-
-        return null;
+        return new CameraEngine();
     }
 
+    // Live Wallpaperの描画などを個なうクラス
     class CameraEngine extends Engine {
         @Override
         public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
