@@ -2,6 +2,7 @@ package com.hosshan.android.camerawallpaper;
 
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
@@ -65,106 +66,77 @@ public class CameraWallpaper extends WallpaperService {
 
         private class CameraCallback implements SurfaceHolder.Callback {
             private ContextWrapper mContext;
-            private Semaphore mCameraOpenCloseLock = new Semaphore(1);
-            private CameraDevice mCameraDevice;
+            private Camera mCamera;
 
             public CameraCallback(ContextWrapper context) {
                 mContext = context;
             }
 
+            // 画面が開いた時に呼ばれるメソッド
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
-                openCamera();
+                openCamera(holder);
             }
 
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-            }
-
+            // 画面が破棄されるときに呼ばれるメソッド
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
                 closeCamera();
             }
 
-            private void openCamera() {
-                /*if (mContext.checkSelfPermission(Manifest.permission.CAMERA)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    requestCameraPermission();
-                    return;
-                }*/
-                CameraManager manager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
+            // 画面が回転した時などに呼ばれるメソッド
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                changeCameraState(width, height);
+            }
+
+            private void openCamera(SurfaceHolder holder) {
+                // カメラインスタンスを取得
+                mCamera = Camera.open();
                 try {
-                    Log.d(TAG, "tryAcquire");
-                    if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-                        throw new RuntimeException("Time out waiting to lock camera opening.");
-                    }
-                    String cameraId = manager.getCameraIdList()[0];
-                    manager.openCamera(cameraId, mStateCallback, null);
-                } catch (CameraAccessException | SecurityException e) {
-                    // Nothing action
+                    mCamera.setPreviewDisplay(holder);
+                } catch (Exception e) {
                     e.printStackTrace();
-                } catch (NullPointerException e) {
-                    e.printStackTrace();
-                    // Currently an NPE is thrown when the Camera2API is used but not supported on the device this code runs.
-                } catch (InterruptedException e) {
-                    throw new RuntimeException("Interrupted while trying to lock camera opening.");
                 }
             }
 
             private void closeCamera() {
-                try {
-                    mCameraOpenCloseLock.acquire();
-                    if (null != mCameraDevice) {
-                        mCameraDevice.close();
-                        mCameraDevice = null;
-                    }
-                } catch (InterruptedException e) {
-                    throw new RuntimeException("Interrupted while trying to lock camera closing.");
-                } finally {
-                    mCameraOpenCloseLock.release();
-                }
+                // カメラインスタンス開放
+                mCamera.release();
+                mCamera = null;
             }
 
-            private CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
+            private void changeCameraState(int width, int height) {
+                Log.d(TAG, "surfaceChanged width:" + width + " height:" + height);
 
-                @Override
-                public void onOpened(CameraDevice cameraDevice) {
-                    Log.d(TAG, "deviceCallback.onOpened() start");
-                    mCameraDevice = cameraDevice;
-                    Surface surface = getSurfaceHolder().getSurface();
-                    List<Surface> surfaceList = Collections.singletonList(surface);
-                    try {
-                        mCameraDevice.createCaptureSession(surfaceList, mSessionCallback, null);
-                    } catch (CameraAccessException e) {
-                        Log.e(TAG, "couldn't create capture session for camera: " + mCameraDevice.getId(), e);
-                        return;
-                    }
-                    mCameraOpenCloseLock.release();
+                Camera.Parameters parameters = mCamera.getParameters();
+
+                // デバッグ用表示
+                Camera.Size size = parameters.getPictureSize();
+                Log.d(TAG, "getPictureSize width:" + size.width + " size.height:" + size.height);
+                size = parameters.getPreviewSize();
+                Log.d(TAG, "getPreviewSize width:" + size.width + " size.height:" + size.height);
+
+                // プレビューのサイズを変更
+                 parameters.setPreviewSize(size.width, size.height);    // 画面サイズに合わせて変更しようとしたが失敗する
+                // 使用できるサイズはカメラごとに決まっているみたいなので、うまくいかなければこちらを使う
+                // parameters.setPreviewSize(640, 480);
+
+                // 縦画面の場合回転させる
+                if (width < height) {
+                    // 縦画面
+                    mCamera.setDisplayOrientation(90);
+                }else{
+                    // 横画面
+                    mCamera.setDisplayOrientation(0);
                 }
 
-                @Override
-                public void onDisconnected(CameraDevice camera) {
-                    Log.d(TAG, "deviceCallback.onDisconnected() start");
-                }
+                // パラメーターセット
+                mCamera.setParameters(parameters);
+                // プレビュー開始
+                mCamera.startPreview();
+            }
 
-                @Override
-                public void onError(CameraDevice camera, int error) {
-                    Log.d(TAG, "deviceCallback.onError() start");
-                }
-            };
-
-            CameraCaptureSession.StateCallback mSessionCallback = new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(CameraCaptureSession session) {
-                    Log.i(TAG, "capture session configured: " + session);
-                }
-
-                @Override
-                public void onConfigureFailed(CameraCaptureSession session) {
-                    Log.e(TAG, "capture session configure failed: " + session);
-                }
-            };
         }
     }
 }
