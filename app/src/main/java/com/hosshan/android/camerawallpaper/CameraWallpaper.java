@@ -1,7 +1,7 @@
 package com.hosshan.android.camerawallpaper;
 
-import android.Manifest;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
@@ -26,6 +26,7 @@ public class CameraWallpaper extends WallpaperService {
     public static final String TAG = CameraWallpaper.class.getSimpleName();
 
     private CameraEngine.CameraCallback mCameraCallback;
+
 
     @Override
     public void onCreate() {
@@ -53,7 +54,7 @@ public class CameraWallpaper extends WallpaperService {
         @Override
         public void onSurfaceCreated(SurfaceHolder holder) {
             super.onSurfaceCreated(holder);
-            mCameraCallback = new CameraCallback(getApplicationContext());
+            mCameraCallback = new CameraCallback(CameraWallpaper.this);
             holder.addCallback(mCameraCallback);
         }
 
@@ -63,11 +64,11 @@ public class CameraWallpaper extends WallpaperService {
         }
 
         private class CameraCallback implements SurfaceHolder.Callback {
-            private Context mContext;
+            private ContextWrapper mContext;
             private Semaphore mCameraOpenCloseLock = new Semaphore(1);
             private CameraDevice mCameraDevice;
 
-            public CameraCallback(Context context) {
+            public CameraCallback(ContextWrapper context) {
                 mContext = context;
             }
 
@@ -87,6 +88,11 @@ public class CameraWallpaper extends WallpaperService {
             }
 
             private void openCamera() {
+                /*if (mContext.checkSelfPermission(Manifest.permission.CAMERA)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    requestCameraPermission();
+                    return;
+                }*/
                 CameraManager manager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
                 try {
                     Log.d(TAG, "tryAcquire");
